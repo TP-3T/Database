@@ -96,3 +96,13 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+
+## Prisma
+*  Prisma is an open-source Object-relational mapper (ORM) that allows cevelopers to define their application models in an intuitive data modeling language. Reasons we're using Prisma is so that we can keep our databases code language infrastructure consistent with typescript and we can ensure type safety in our queries to name a few.
+* `pnpm prisma migrate reset` to reset the db
+* `npm prisma migrate dev` to generate your db
+* `npm prisma studio` modify the db when developing
+
+## Docker
+* `docker compose up -d` to run the docker container
