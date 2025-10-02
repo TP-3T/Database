@@ -1,0 +1,32 @@
+name: Formatting
+
+on: 
+  pull_request:
+    branches: [ main, dev ]
+  push: 
+    branches: [ database ]
+
+jobs: 
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+
+      - name: setup node
+        uses: actions/setup-node@v5
+        with: 
+          node-version: '16'
+
+      - name: install dependencies
+        run: |
+          yarn install
+
+      - name: run ESlint
+        run: |
+          yarn lint
+
+      - name: run prettier
+        run: |
+          yarn format --check
