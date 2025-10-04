@@ -9,115 +9,146 @@ generator client {
 }
 
 model Player {
-  id                   Int         @id @default(autoincrement())
-  userName             String
-  currentBalance       Float
-  moneyEarned          Float?
-  moneyLost            Float?
-  ownedTiles           Tile[]
-  buildings            Building[] 
-  tileChanges          TileChange[]
+  id                    Int          @id @default(autoincrement())
+  userName              String
+  currentBalance        Float
+  moneyEarned           Float        @default(0.0)
+  moneyLost             Float        @default(0.0)
+  ownedTiles            Tile[]       @relation("TileOwner")
+  authoredMaps          Map[]        @relation("PlayerMaps") // authored maps
+  games                 GamePlayer[]
+  steamId               String       @unique
 }
 
 model Game {
-  id          Int         @id @default(autoincrement())
-  worldId     Int         @unique
-  world       World       @relation(fields: [worldId], references: [id])
+  id          Int       @id @default(autoincrement())
+  worldId     Int       @unique
+  world       World     @relation(fields: [worldId], references: [id])
+  multiplayer Boolean   @default(false)
+  tiles       Tile[]    @relation("GameMap")
+  players     GamePlayer[]
   turns       Turn[]
 }
 
+model GamePlayer {
+  id          Int       @id @default(autoincrement())
+  role        GameRoles @default(PARTICIPANT)
+
+  gameId      Int
+  game        Game      @relation(fields: [gameId], references: [id])
+  playerId    Int
+  player      Player    @relation(fields: [playerId], references: [id])
+  @@unique([gameId, playerId])
+}
+
+enum GameRoles {
+  HOST
+  PARTICIPANT
+  OBSERVER
+}
+
 model World {
-  id              Int      @id @default(autoincrement())
-  pollutionLevel  Int
-  seaLevel        Int
-  temperature     Int
-  year            DateTime
-  map             Map?
-  game            Game?
-  @@map("worlds")
+  id             Int      @id @default(autoincrement())
+  pollutionLevel Int
+  seaLevel       Int
+  temperature    Int
+  year           Int
+  changes        WorldChange[]
+  game           Game?
 }
 
 model Map {
-  id              Int      @id @default(autoincrement())
-  worldId         Int      @unique
-  world           World    @relation(fields: [worldId], references: [id])
-  tiles           Tile[]
+  id       Int     @id @default(autoincrement())
+  name     String
+  tiles    Tile[]  @relation("MapTiles")
+
+  playerId Int?
+  author   Player? @relation(name: "PlayerMaps", fields: [playerId], references: [id])
 }
 
 model BuildingBase {
-  id                  Int               @id @default(autoincrement())
-  type                BuildingType      @unique  // static data for each category
-  category            BuildingCategory
-  costWorkers         Int?              // worker costs
-  costMoney           Float?
-  pollutionProduced   Int?              // per turn
-  populationProduced  Int?
-  moneyProduced       Float?            // per turn
-  buildings           Building[]
-  tileChanges         TileChange[]
+  id                 Int              @id @default(autoincrement())
+  type               BuildingType     @unique // static data for each category
+  category           BuildingCategory
+  costWorkers        Int? // worker costs
+  costMoney          Float?
+  pollutionProduced  Int? // per turn
+  populationProduced Int?
+  moneyProduced      Float // per turn
+  buildings          Building[]
 }
 
 model Building {
-  id              Int               @id @default(autoincrement())
-  buildingBaseId  Int
-  buildingBase    BuildingBase      @relation(fields: [buildingBaseId], references: [id])
-  ownerId         Int?
-  owner           Player?           @relation(fields: [ownerId], references: [id])
-  tileId          Int?              @unique
-  tile            Tile?             @relation(fields: [tileId], references: [id])
-  upgradeLevel    Int               @default(1)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id                 Int              @id @default(autoincrement())
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  TileChange         TileChange[]
+
+  buildingBaseId     Int
+  buildingBase       BuildingBase     @relation(fields: [buildingBaseId], references: [id])
+  tileId             Int?             @unique
+  tile               Tile?            @relation(fields: [tileId], references: [id])
 }
 
 model Tile {
-  id            Int           @id @default(autoincrement())
-  x_coordinate  Int
-  y_coordinate  Int
-  building      Building?
-  tileType      TileType      @default(PLAINS)
-  elevation     Int
-  label         String?
-  ownerId        Int?          
-  owner         Player?       @relation(fields: [ownerId], references: [id])
-  mapId         Int      
-  map           Map           @relation(fields: [mapId], references: [id])
-  changes       TileChange[]
+  id           Int          @id @default(autoincrement())
+  x_coordinate Int
+  y_coordinate Int
+  building     Building? 
+  tileType     TileType     @default(PLAINS)
+  elevation    Int
+  label        String?
+  tileChanges  TileChange[]
+
+  ownerId      Int?
+  owner        Player?       @relation(name: "TileOwner", fields: [ownerId], references: [id])
+  gameId       Int?
+  game         Game?         @relation(name: "GameMap", fields: [gameId], references: [id])
+  mapId        Int?
+  map          Map?          @relation(name: "MapTiles", fields: [mapId], references: [id])
+  
+
   @@unique([mapId, x_coordinate, y_coordinate])
+  @@unique([gameId, x_coordinate, y_coordinate])
 }
 
 model Turn {
-  id            Int              @id @default(autoincrement())
-  number        Int
-  gameId        Int       
-  game          Game             @relation(fields: [gameId], references: [id])
-  worldChanges  WorldChange[]
-  tileChanges   TileChange[]
+  id           Int           @id @default(autoincrement())
+  turnNumber   Int          
+  worldChanges WorldChange[]
+  tileChanges  TileChange[]
+
+  gameId       Int
+  game         Game          @relation(fields: [gameId], references: [id])
+
+  @@unique([gameId, turnNumber])
 }
 
 model WorldChange {
-  id              Int       @id @default(autoincrement())
-  pollutionLevel  Int?
-  seaLevel        Int?
-  temperature     Int?
-  year            DateTime?
-  turnId          Int       
-  turn            Turn      @relation(fields: [turnId], references: [id])
+  id             Int       @id @default(autoincrement())
+  pollutionLevel Int?
+  seaLevel       Int?
+  temperature    Int?
+  year           Int?
+
+  turnId         Int
+  turn           Turn      @relation(fields: [turnId], references: [id])
+  worldId        Int
+  world          World     @relation(fields: [worldId], references: [id])
 }
 
 model TileChange {
-  id            Int             @id @default(autoincrement())
-  buildingId    Int?
-  building      BuildingBase?   @relation(fields: [buildingId], references: [id])
-  tileType      TileType?
-  elevation     Int?
-  label         String?
-  ownerId       Int?
-  owner         Player?         @relation(fields: [ownerId], references: [id])
-  turnId        Int       
-  turn          Turn            @relation(fields: [turnId], references: [id])
-  tileId        Int       
-  tile          Tile            @relation(fields: [tileId], references: [id])
+  id         Int       @id @default(autoincrement())
+  buildingId Int?
+  building   Building? @relation(fields: [buildingId], references: [id])
+  tileType   TileType?
+  elevation  Int?
+  label      String?
+
+  turnId     Int
+  turn       Turn      @relation(fields: [turnId], references: [id])
+  tileId     Int
+  tile       Tile      @relation(fields: [tileId], references: [id])
 }
 
 enum BuildingCategory {
@@ -141,7 +172,7 @@ enum BuildingType {
   NUCLEAR
   // utility
   SEA_WALL
-  PUMP 
+  PUMP
 }
 
 enum TileType {
