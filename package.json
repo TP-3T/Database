@@ -23,8 +23,8 @@
     "db:deploy": "npx prisma migrate deploy && npx prisma generate"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.1",
-    "@nestjs/core": "^11.0.1",
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/core": "^11.1.6",
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/client": "^6.16.2",
     "express": "^5.1.0",
