@@ -1,0 +1,132 @@
+@startuml name TTTdatabaseSchema
+' UML for the Database Schema of Turn The Tides 
+
+' Player
+entity Player {
+  *id : Int
+  *userName : String
+  *currentBalance : Float
+  *moneyEarned : Float
+  *moneyLost : Float
+  *steamId : String
+}
+
+' Games
+entity Game {
+  *id : Int
+  *multiplayer : Boolean
+}
+
+' Player & Games Junction
+entity GamePlayer {
+  *id : Int
+  *role : GameRoles
+}
+
+' Worlds
+entity World {
+  *id : Int
+  *pollutionLevel : Int
+  *seaLevel : Int
+  *temperature : Int
+  *year : DateTime
+}
+
+' Maps
+entity Map {
+  *id : Int
+  *name : String
+}
+
+' Tiles
+entity Tile {
+  *id : Int
+  *x_coordinate : Int
+  *y_coordinate : Int
+  *tileType : TileType
+  *elevation : Int
+  *label : String
+}
+
+' Buildings
+entity Building {
+  *id : Int
+  *createdAt : DateTime
+  *updatedAt : DateTime
+  *tileId : Int
+  *buildingBaseId : Int
+}
+
+' BuildingDim
+entity BuildingBase {
+  *id : Int
+  *type : BuildingType
+  *category : BuildingCategory
+  *costWorkers : Int
+  *costMoney : Float
+  *pollutionProduced : Int
+  *populationProduced : Int
+  *incomeGenerated : Float
+}
+
+' Turn Table to record state changes
+entity Turn {
+  *id : Int
+  *turnNumber : Int
+}
+
+' World State Changes, references the World table.
+entity WorldChange {
+  *id : Int
+  *pollutionLevel : Int?
+  *seaLevel : Int?
+  *temperature : Int?
+  *year : Int?
+}
+
+' Tile State Changes, references the Tile table.
+entity TileChange {
+  *id : Int
+  *buildingId : Int?
+  *tileType : TileType?
+  *elevation : Int?
+  *label : String?
+}
+
+' -- Relationships --
+Player ||--o{ GamePlayer : "1..*"
+Game ||--o{ GamePlayer : "1..*"
+
+' Player - Map (authored maps)
+Player ||--o{ Map : "0..* authored"
+
+' Game - World (1-to-1)
+Game ||--|| World : "1"
+
+' Game - Tiles (game maps)
+Game ||--o{ Tile : "0..*"
+
+' Map - Tiles (saved maps)
+Map ||--o{ Tile : "0..*"
+
+' Game - Turn
+Game ||--o{ Turn : "1..*"
+
+' Turn - WorldChange
+Turn ||--o{ WorldChange : "0..*"
+
+' Turn - TileChange
+Turn ||--o{ TileChange : "0..*"
+
+' Tile - TileChange
+Tile ||--o{ TileChange : "0..*"
+
+' Building - BuildingBase
+BuildingBase ||--o{ Building : "1..*"
+
+' Building - TileChange
+Building ||--o{ TileChange : "0..*"
+
+@enduml
+
+' Credit chatGPT for help with the ERD relationships syntax
