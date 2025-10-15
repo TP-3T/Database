@@ -8,9 +8,61 @@ generator client {
   output   = "../generated/prisma"
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  email     String   @unique
-  name      String?
+// model User {
+//   id        Int      @id @default(autoincrement())
+//   createdAt DateTime @default(now())
+//   email     String   @unique
+//   name      String?
+// }
+
+// 20251009 OG - Adding models for the ER diagram created in class today
+model World {
+  id Int @id @default(autoincrement())
+  pollution Int
+  temp Int
+  year Int
+  seaLevel Int
+
+  Map Map[]
+}
+
+model Map {
+  id Int @id @default(autoincrement())
+  world World @relation(fields: [worldId], references: [id])
+  worldId Int @unique
+  steamId String
+  MapName String
+}
+
+model MapTile {
+  id Int @id @default(autoincrement())
+  tile Tile @relation(fields: [tileId], references: [id])
+  tileId Int @unique
+  yCoord Int
+  xCoord Int
+  owner Int
+  label String?
+}
+
+model Tile {
+  id Int @id @default(autoincrement())
+  feature Feature @relation(fields: [featureName], references: [name])
+  featureName String @unique
+  tileType TileType @relation(fields: [tileTypeName], references: [name])
+  tileTypeName String @unique
+  elevation Int
+
+  MapTile MapTile[]
+}
+
+model Feature {
+  name String @id
+
+  Tile Tile[]
+}
+
+model TileType {
+  name String @id
+
+  Tile Tile[]
 }
