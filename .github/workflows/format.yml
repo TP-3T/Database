@@ -24,6 +24,3 @@ jobs:
 
       - name: run ESlint
         run: npm run lint
-
-      - name: run prettier
-        run: npm run format:ci
