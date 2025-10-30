@@ -1,0 +1,29 @@
+name: Formatting
+
+on: 
+  pull_request:
+    branches: [ main, dev ]
+  push: 
+    branches: [ database, devops ]
+
+jobs: 
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+
+      - name: setup node
+        uses: actions/setup-node@v5
+        with: 
+          node-version: '20'
+
+      - name: install dependencies
+        run: npm ci
+
+      - name: run ESlint
+        run: npm run lint
+
+      - name: run prettier
+        run: npm run format:ci
