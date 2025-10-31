@@ -8,13 +8,6 @@ generator client {
   output   = "../generated/prisma"
 }
 
-// model User {
-//   id        Int      @id @default(autoincrement())
-//   createdAt DateTime @default(now())
-//   email     String   @unique
-//   name      String?
-// }
-
 // 20251009 OG - Adding models for the ER diagram created in class today
 model World {
   id Int @id @default(autoincrement())
