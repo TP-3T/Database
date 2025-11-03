@@ -9,53 +9,53 @@ generator client {
 }
 
 // 20251009 OG - Adding models for the ER diagram created in class today
-model World {
-  id Int @id @default(autoincrement())
+model WorldState {
+  world_state_id Int @id @default(autoincrement())
   pollution Int
   temp Int
   year Int
   seaLevel Int
 
-  Map Map[]
+  map Map[]
 }
 
 model Map {
-  id Int @id @default(autoincrement())
-  world World @relation(fields: [worldId], references: [id])
-  worldId Int @unique
-  steamId String
-  MapName String
+  map_id Int @id @default(autoincrement())
+  world WorldState @relation(fields: [world_state_id], references: [world_state_id])
+  world_state_id Int @unique
+  steam_id String
+  map_name String
 }
 
 model MapTile {
-  id Int @id @default(autoincrement())
-  tile Tile @relation(fields: [tileId], references: [id])
-  tileId Int @unique
-  yCoord Int
-  xCoord Int
+  map_id Int @id @default(autoincrement())
+  tile_data TileData @relation(fields: [tile_data_id], references: [tile_data_id])
+  tile_data_id Int @unique
+  feature Feature @relation(fields: [feature_name], references: [feature_name])
+  feature_name String @unique
+  y_coord Int
+  x_coord Int
   owner Int
   label String?
 }
 
-model Tile {
-  id Int @id @default(autoincrement())
-  feature Feature @relation(fields: [featureName], references: [name])
-  featureName String @unique
-  tileType TileType @relation(fields: [tileTypeName], references: [name])
-  tileTypeName String @unique
+model TileData {
+  tile_data_id Int @id @default(autoincrement())
+  tile_type TileType @relation(fields: [tile_type_name], references: [tile_type_name])
+  tile_type_name String @unique
   elevation Int
 
-  MapTile MapTile[]
+  map_tile MapTile[]
 }
 
 model Feature {
-  name String @id
+  feature_name String @id
 
-  Tile Tile[]
+  map_tile MapTile[]
 }
 
 model TileType {
-  name String @id
+  tile_type_name String @id
 
-  Tile Tile[]
+  tile_data TileData[]
 }
