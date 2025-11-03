@@ -5,57 +5,48 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 // 20251009 OG - Adding models for the ER diagram created in class today
 model WorldState {
   world_state_id Int @id @default(autoincrement())
-  pollution Int
-  temp Int
-  year Int
-  seaLevel Int
+  pollution      Int
+  temperature    Int
+  year           Int
+  sea_level      Int
 
-  map Map[]
+  maps Map[]
 }
 
 model Map {
-  map_id Int @id @default(autoincrement())
-  world WorldState @relation(fields: [world_state_id], references: [world_state_id])
-  world_state_id Int @unique
-  steam_id String
-  map_name String
+  map_id         Int    @id @default(autoincrement())
+  world_state_id Int
+  steam_id       String
+  map_name       String
+
+  world_state WorldState @relation(fields: [world_state_id], references: [world_state_id])
+  map_tiles   MapTile[]
 }
 
 model MapTile {
-  map_id Int @id @default(autoincrement())
+  map_id       Int     
+  tile_data_id Int     
+  feature      Int
+  y_coord      Int
+  x_coord      Int
+  owner        Int
+  label        String?
+
+  map       Map      @relation(fields: [map_id], references: [map_id])
   tile_data TileData @relation(fields: [tile_data_id], references: [tile_data_id])
-  tile_data_id Int @unique
-  feature Feature @relation(fields: [feature_name], references: [feature_name])
-  feature_name String @unique
-  y_coord Int
-  x_coord Int
-  owner Int
-  label String?
+
+  @@id([map_id, tile_data_id])
 }
 
 model TileData {
   tile_data_id Int @id @default(autoincrement())
-  tile_type TileType @relation(fields: [tile_type_name], references: [tile_type_name])
-  tile_type_name String @unique
-  elevation Int
+  tile_type    Int
+  elevation    Int
 
-  map_tile MapTile[]
-}
-
-model Feature {
-  feature_name String @id
-
-  map_tile MapTile[]
-}
-
-model TileType {
-  tile_type_name String @id
-
-  tile_data TileData[]
+  map_tiles MapTile[]
 }
