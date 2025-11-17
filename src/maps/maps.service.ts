@@ -51,10 +51,67 @@ export class MapsService {
         };
     }
 
-    async findBySteamId(steamId: string) {
+    async findBySteamId(
+        steamId: string,
+        page?: number,
+        pageSize?: number,
+    ) {
+        if (!page || !pageSize) {
+            return this.prisma.map.findMany({
+                where: { steam_id: steamId },
+                include: {
+                    world_state: true,
+                    map_tiles: { include: { tile_data: true } },
+                },
+            });
+        }
+
+        const skip = (page - 1) * pageSize;
+
+        const [maps, total] = await Promise.all([
+            this.prisma.map.findMany({
+                where: { steam_id: steamId },
+                skip,
+                take: pageSize,
+                include: {
+                    world_state: true,
+                    map_tiles: { include: { tile_data: true } },
+                },
+            }),
+            this.prisma.map.count({ where: { steam_id: steamId } }),
+        ]);
+
+        return {
+            data: maps,
+            info: {
+                total,
+                page,
+                pageSize,
+                numPages: Math.ceil(total / pageSize),
+            },
+        };
+    }
+
+    async findByMapId(mapId: number) {
         return this.prisma.map.findFirst({
             where: {
-                steam_id: steamId,
+                map_id: mapId,
+            },
+            include: {
+                world_state: true,
+                map_tiles: {
+                    include: {
+                        tile_data: true,
+                    },
+                },
+            },
+        });
+    }
+
+    async findByMapName(mapName: string) {
+        return this.prisma.map.findFirst({
+            where: {
+                map_name: mapName,
             },
             include: {
                 world_state: true,
