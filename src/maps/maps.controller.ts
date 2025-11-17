@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Param, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
 import { MapsService } from './maps.service'
 
@@ -35,7 +35,7 @@ export class MapsController {
 
     @Get('mapId/:mapId')
     @ApiParam({ name: 'mapId', type: Number })
-    async findByMapId(@Param('mapId') mapId: number) 
+    async findByMapId(@Param('mapId', ParseIntPipe) mapId: number) 
     {
         return this.mapsService.findByMapId(mapId);
     }
