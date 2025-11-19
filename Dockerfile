@@ -16,4 +16,4 @@ RUN yarn build
 EXPOSE 3333
 ENV PORT=3333
 
-CMD ["sh", "-c", "yarn prisma migrate deploy && node dist/src/main"]
+CMD ["node", "dist/src/main"]
