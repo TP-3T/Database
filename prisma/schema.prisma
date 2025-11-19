@@ -29,24 +29,23 @@ model Map {
 }
 
 model MapTile {
-  map_id       Int     
-  tile_data_id Int     
-  feature      Int
-  y_coord      Int
+  map_id       Int
+  tile_data_id Int
+  z_coord      Int
   x_coord      Int
   owner        Int
   label        String?
 
-  map       Map      @relation(fields: [map_id], references: [map_id])
-  tile_data TileData @relation(fields: [tile_data_id], references: [tile_data_id])
+  map          Map      @relation(fields: [map_id], references: [map_id])
+  tile_data    TileData @relation(fields: [tile_data_id], references: [tile_data_id])
 
-  @@id([map_id, tile_data_id])
+  @@id([map_id, x_coord, z_coord])
 }
 
 model TileData {
-  tile_data_id Int @id @default(autoincrement())
+  tile_data_id Int      @id @default(autoincrement())
   tile_type    Int
   elevation    Int
 
-  map_tiles MapTile[]
+  map_tiles    MapTile[]
 }
