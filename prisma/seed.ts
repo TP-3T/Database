@@ -4,53 +4,63 @@ import { join } from 'path';
 
 const prisma = new PrismaClient();
 
-interface OffsetCoordinates {
-    x: number;
-    z: number;
+interface TileJson {
+    Feature: string | null;
+    TileType: number;
+    Owner: number;
+    Elevation: number;
+    Label: string | null;
 }
 
-interface MapTileDataJson {
-    Height: number;
-    TileType: number;
-    OffsetCoordinates: OffsetCoordinates;
+interface WorldStateJson {
+    Pollution: number;
+    SeaLevel: number;
+    Temp: number;
+    Year: number;
 }
 
 interface MapJson {
-    Name: string;
-    Width: number;
-    Height: number;
-    MapTilesData: MapTileDataJson[];
+    MapID: number;
+    SteamID: string;
+    MapName: string;
+    WorldState: WorldStateJson;
+    MapTile: {
+        [x: string]: {
+            [z: string]: TileJson;
+        }
+    }
 }
 
 async function main() {
-    const jsonPath = join(__dirname, 'seed', 'lower_mainland_test_map_v2.json');
+    const jsonPath = join(__dirname, 'seed', 'lower_mainland_clamped_height.json');
     const raw = readFileSync(jsonPath, 'utf8');
     const data = JSON.parse(raw) as MapJson;
 
-    console.log(`Loading map: ${data.Name}`);
-    console.log(`Dimensions: ${data.Width} x ${data.Height}`);
-    console.log(`Total tiles in JSON: ${data.MapTilesData.length}`);
+    console.log(`Loading map: ${data.MapName} (ID: ${data.MapID})`);
+    console.log(`SteamID: ${data.SteamID}`);
 
-    const validTiles = data.MapTilesData.filter(
-        (t) => t && t.OffsetCoordinates && t.OffsetCoordinates.x !== undefined && t.OffsetCoordinates.z !== undefined
-    );
+    let tileCount = 0;
+    for (const x in data.MapTile) {
+        tileCount += Object.keys(data.MapTile[x]).length;
+    }
 
-    console.log(`Valid tiles with coordinates: ${validTiles.length}`);
+    console.log(`Total tiles in JSON: ${tileCount}`);
     console.log('Creating TileData templates...');
 
-
     const tileDataMap = new Map<string, { tile_type: number; elevation: number }>();
-    
-    for (const tile of validTiles) {
-        const key = `${tile.TileType}_${tile.Height}`;
-        if (!tileDataMap.has(key)) {
-            tileDataMap.set(key, { tile_type: tile.TileType, elevation: tile.Height });
+
+    for (const xKey in data.MapTile) {
+        for (const zKey in data.MapTile[xKey]) {
+            const tile = data.MapTile[xKey][zKey];
+            const key = `${tile.TileType}_${tile.Elevation}`;
+            if (!tileDataMap.has(key)) {
+                tileDataMap.set(key, { tile_type: tile.TileType, elevation: tile.Elevation });
+            }
         }
     }
 
     const tileDataTemplates = Array.from(tileDataMap.values());
     console.log(`Creating ${tileDataTemplates.length} unique TileData templates...`);
-
 
     await prisma.tileData.createMany({
         data: tileDataTemplates,
@@ -61,10 +71,10 @@ async function main() {
 
     const worldState = await prisma.worldState.create({
         data: {
-            pollution: 0,
-            temperature: 0,
-            year: 0,
-            sea_level: 0,
+            pollution: data.WorldState.Pollution,
+            temperature: data.WorldState.Temp,
+            year: data.WorldState.Year,
+            sea_level: data.WorldState.SeaLevel,
         },
     });
 
@@ -72,7 +82,7 @@ async function main() {
 
     const allTileData = await prisma.tileData.findMany();
     const tileDataLookup = new Map<string, number>();
-    
+
     for (const td of allTileData) {
         const key = `${td.tile_type}_${td.elevation}`;
         tileDataLookup.set(key, td.tile_data_id);
@@ -80,29 +90,42 @@ async function main() {
 
     console.log('Preparing map tiles...');
 
-    const tiles = validTiles.map((t) => {
-        const key = `${t.TileType}_${t.Height}`;
-        const tile_data_id = tileDataLookup.get(key);
-        
-        if (!tile_data_id) {
-            throw new Error(`No TileData found for tile_type=${t.TileType}, elevation=${t.Height}`);
-        }
+    const tiles: Array<{
+        tile_data_id: number;
+        z_coord: number;
+        x_coord: number;
+        owner: number;
+        label: string | null;
+        feature: string | null;
+    }> = [];
 
-        return {
-            tile_data_id: tile_data_id,
-            z_coord: t.OffsetCoordinates.z,
-            x_coord: t.OffsetCoordinates.x,
-            owner: 1,
-            label: null as string | null,
-        };
-    });
+    for (const xKey in data.MapTile) {
+        for (const zKey in data.MapTile[xKey]) {
+            const tile = data.MapTile[xKey][zKey];
+            const key = `${tile.TileType}_${tile.Elevation}`;
+            const tile_data_id = tileDataLookup.get(key);
+
+            if (!tile_data_id) {
+                throw new Error(`No TileData found for tile_type=${tile.TileType}, elevation=${tile.Elevation}`);
+            }
+
+            tiles.push({
+                tile_data_id: tile_data_id,
+                z_coord: parseInt(zKey, 10),
+                x_coord: parseInt(xKey, 10),
+                owner: tile.Owner,
+                label: tile.Label,
+                feature: tile.Feature,
+            });
+        }
+    }
 
     console.log(`Creating map with ${tiles.length} tiles...`);
 
     const map = await prisma.map.create({
         data: {
-            steam_id: '0:0:1129392',
-            map_name: data.Name,
+            steam_id: data.SteamID,
+            map_name: data.MapName,
             world_state_id: worldState.world_state_id,
             map_tiles: {
                 create: tiles,
@@ -116,7 +139,7 @@ async function main() {
         },
     });
 
-    console.log(`Successfully seeded map: ${data.Name}`);
+    console.log(`Successfully seeded map: ${data.MapName}`);
 }
 
 main()

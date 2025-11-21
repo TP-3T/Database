@@ -34,6 +34,7 @@ model MapTile {
   z_coord      Int
   x_coord      Int
   owner        Int
+  feature      String?
   label        String?
 
   map          Map      @relation(fields: [map_id], references: [map_id])
