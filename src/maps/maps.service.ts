@@ -118,41 +118,43 @@ export class MapsService {
     }
 
     async create(
-        steamId: string,
-        mapName: string,
         mapData: {
-            MapTilesData: Array<{
-                TileType: number;
-                OffsetCoordinates: { x: number; z: number };
-                Height: number;
-            }>;
-        },
-        worldState?: {
-            pollution: number;
-            temperature: number;
-            year: number;
-            sea_level: number;
+            MapID: number;
+            SteamID: string;
+            MapName: string;
+            WorldState: {
+                Pollution: number;
+                SeaLevel: number;
+                Temp: number;
+                Year: number;
+            };
+            MapTile: {
+                [x: string]: {
+                    [z: string]: {
+                        Feature: string | null;
+                        TileType: number;
+                        Owner: number;
+                        Elevation: number;
+                        Label: string | null;
+                    };
+                };
+            };
         },
     ) {
-        const invalidTiles = mapData.MapTilesData.filter(
-            (t) => !t ||
-                !t.OffsetCoordinates ||
-                t.OffsetCoordinates.x === undefined ||
-                t.OffsetCoordinates.z === undefined ||
-                t.TileType === undefined ||
-                t.Height === undefined
-        );
-
-        if (invalidTiles.length > 0) {
-            throw new Error(`Invalid tiles in request: ${invalidTiles.length} malformed tiles found`);
-        }
-
         const tileDataMap = new Map<string, { tile_type: number; elevation: number }>();
 
-        for (const tile of mapData.MapTilesData) {
-            const key = `${tile.TileType}_${tile.Height}`;
-            if (!tileDataMap.has(key)) {
-                tileDataMap.set(key, { tile_type: tile.TileType, elevation: tile.Height });
+        for (const xKey in mapData.MapTile) {
+            for (const zKey in mapData.MapTile[xKey]) {
+                const tile = mapData.MapTile[xKey][zKey];
+                
+                if (tile.TileType === undefined || tile.Elevation === undefined) {
+                    throw new Error(`Invalid tile at position [${xKey}][${zKey}]: missing TileType or Elevation`);
+                }
+
+                const key = `${tile.TileType}_${tile.Elevation}`;
+                if (!tileDataMap.has(key)) {
+                    tileDataMap.set(key, { tile_type: tile.TileType, elevation: tile.Elevation });
+                }
             }
         }
 
@@ -162,11 +164,11 @@ export class MapsService {
         });
 
         const world = await this.prisma.worldState.create({
-            data: worldState || {
-                pollution: 0,
-                temperature: 0,
-                year: 0,
-                sea_level: 0,
+            data: {
+                pollution: mapData.WorldState.Pollution,
+                temperature: mapData.WorldState.Temp,
+                year: mapData.WorldState.Year,
+                sea_level: mapData.WorldState.SeaLevel,
             },
         });
 
@@ -177,27 +179,40 @@ export class MapsService {
             tileDataLookup.set(`${td.tile_type}_${td.elevation}`, td.tile_data_id);
         }
 
-        const mapTiles = mapData.MapTilesData.map((t) => {
-            const key = `${t.TileType}_${t.Height}`;
-            const tile_data_id = tileDataLookup.get(key);
+        const mapTiles: Array<{
+            tile_data_id: number;
+            z_coord: number;
+            x_coord: number;
+            owner: number;
+            label: string | null;
+            feature: string | null;
+        }> = [];
 
-            if (!tile_data_id) {
-                throw new Error(`No TileData found for tile_type=${t.TileType}, elevation=${t.Height}`);
+        for (const xKey in mapData.MapTile) {
+            for (const zKey in mapData.MapTile[xKey]) {
+                const tile = mapData.MapTile[xKey][zKey];
+                const key = `${tile.TileType}_${tile.Elevation}`;
+                const tile_data_id = tileDataLookup.get(key);
+
+                if (!tile_data_id) {
+                    throw new Error(`No TileData found for tile_type=${tile.TileType}, elevation=${tile.Elevation}`);
+                }
+
+                mapTiles.push({
+                    tile_data_id,
+                    z_coord: parseInt(zKey, 10),
+                    x_coord: parseInt(xKey, 10),
+                    owner: tile.Owner,
+                    label: tile.Label,
+                    feature: tile.Feature,
+                });
             }
-
-            return {
-                tile_data_id,
-                z_coord: t.OffsetCoordinates.z,
-                x_coord: t.OffsetCoordinates.x,
-                owner: 1,
-                label: null,
-            };
-        });
+        }
 
         return this.prisma.map.create({
             data: {
-                steam_id: steamId,
-                map_name: mapName,
+                steam_id: mapData.SteamID,
+                map_name: mapData.MapName,
                 world_state_id: world.world_state_id,
                 map_tiles: {
                     create: mapTiles,

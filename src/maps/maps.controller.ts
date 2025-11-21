@@ -48,23 +48,31 @@ export class MapsController {
     }
 
     @Post()
-    @ApiQuery({ name: 'steam_id', required: true, type: String })
-    @ApiQuery({ name: 'map_name', required: true, type: String })
     async create(
-        @Query('steam_id') steamId: string,
-        @Query('map_name') mapName: string,
         @Body()
         mapData: {
-            MapTilesData: Array<{
-                TileType: number;
-                OffsetCoordinates: {
-                    x: number;
-                    z: number;
+            MapID: number;
+            SteamID: string;
+            MapName: string;
+            WorldState: {
+                Pollution: number;
+                SeaLevel: number;
+                Temp: number;
+                Year: number;
+            };
+            MapTile: {
+                [x: string]: {
+                    [z: string]: {
+                        Feature: string | null;
+                        TileType: number;
+                        Owner: number;
+                        Elevation: number;
+                        Label: string | null;
+                    };
                 };
-                Height: number;
-            }>;
+            };
         },
     ) {
-        return this.mapsService.create(steamId, mapName, mapData);
+        return this.mapsService.create(mapData);
     }
 }
