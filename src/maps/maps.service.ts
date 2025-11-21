@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 export class MapsService {
     private prisma = new PrismaClient();
 
+    // #region GET ALL
     async getAll(page?: number, pageSize?: number) {
         if (!page || !pageSize) {
             return this.prisma.map.findMany({
@@ -41,6 +42,9 @@ export class MapsService {
             },
         };
     }
+
+    //#endregion
+    //#region STEAMID
 
     async findBySteamId(
         steamId: string,
@@ -85,8 +89,11 @@ export class MapsService {
         };
     }
 
+    //#endregion
+    //#region MAP ID
+
     async findByMapId(mapId: number) {
-        return this.prisma.map.findFirst({
+        const map = await this.prisma.map.findFirst({
             where: {
                 map_id: mapId,
             },
@@ -99,23 +106,102 @@ export class MapsService {
                 },
             },
         });
+
+        if (!map) {
+            return null;
+        }
+
+        const mapTileNested: {
+            [x: string]: {
+                [z: string]: {
+                    Feature: string | null;
+                    TileType: number;
+                    Owner: number;
+                    Elevation: number;
+                    Label: string | null;
+                };
+            };
+        } = {};
+
+        for (const tile of map.map_tiles) {
+            const x = tile.x_coord.toString();
+            const z = tile.z_coord.toString();
+
+            if (!mapTileNested[x]) {
+                mapTileNested[x] = {};
+            }
+
+            mapTileNested[x][z] = {
+                Feature: tile.feature,
+                TileType: tile.tile_data.tile_type,
+                Owner: tile.owner,
+                Elevation: tile.tile_data.elevation,
+                Label: tile.label,
+            };
+        }
+
+        return {
+            MapID: map.map_id,
+            SteamID: map.steam_id,
+            MapName: map.map_name,
+            WorldState: {
+                Pollution: map.world_state.pollution,
+                SeaLevel: map.world_state.sea_level,
+                Temp: map.world_state.temperature,
+                Year: map.world_state.year,
+            },
+            MapTile: mapTileNested,
+        };
     }
 
-    async findByMapName(mapName: string) {
-        return this.prisma.map.findFirst({
-            where: {
-                map_name: mapName,
-            },
-            include: {
-                world_state: true,
-                map_tiles: {
-                    include: {
-                        tile_data: true,
-                    },
+    //#endregion
+    //#region MAPNAME
+
+    async findByMapName(
+        mapName: string,
+        page?: number,
+        pageSize?: number,
+    ) {
+        if (!page || !pageSize) {
+            return this.prisma.map.findMany({
+                where: { map_name: mapName },
+                select: {
+                    map_id: true,
+                    map_name: true,
+                    steam_id: true,
                 },
+            });
+        }
+
+        const skip = (page - 1) * pageSize;
+
+        const [maps, total] = await Promise.all([
+            this.prisma.map.findMany({
+                where: { map_name: mapName },
+                skip,
+                take: pageSize,
+                select: {
+                    map_id: true,
+                    map_name: true,
+                    steam_id: true,
+                },
+            }),
+            this.prisma.map.count({ where: { map_name: mapName } }),
+        ]);
+
+        return {
+            data: maps,
+            info: {
+                total,
+                page,
+                pageSize,
+                numPages: Math.ceil(total / pageSize),
             },
-        });
+        };
     }
+
+    //#endregion
+    //#region CREATE
 
     async create(
         mapData: {
@@ -226,6 +312,8 @@ export class MapsService {
             },
         });
     }
+
+    //#endregion
 
     async onModuleDestroy() {
         await this.prisma.$disconnect();

@@ -42,9 +42,16 @@ export class MapsController {
 
     @Get('mapName/:mapName')
     @ApiParam({ name: 'mapName', type: String })
-    async findByMapName(@Param('mapName') mapName: string)
-    {
-        return this.mapsService.findByMapName(mapName);
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'pageSize', required: false, type: Number })
+    async findByMapName(
+        @Param('mapName') mapName: string,
+        @Query('page') page?: string,
+        @Query('pageSize') pageSize?: string,
+    ) {
+        const pageNum = page ? parseInt(page, 10) : undefined;
+        const pageSizeNum = pageSize ? parseInt(pageSize, 10) : undefined;
+        return this.mapsService.findByMapName(mapName, pageNum, pageSizeNum);
     }
 
     @Post()
